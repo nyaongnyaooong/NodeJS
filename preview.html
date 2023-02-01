@@ -1,0 +1,35 @@
+<html lang="ko">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Document</title>
+</head>
+<body>
+	<script>
+		const obj = {
+			name: 'zerocho',
+			func: function() {
+				console.log('함수: ', this.name);
+			},
+			a: () => {
+				console.log('화살표 함수: ', _this)
+			},
+			b: this,
+			c: {
+				name: 'zerocho2',
+				func2: function() {
+					console.log(this.a);
+				},
+				func3: (a) => {
+					console.log(c);
+				},
+			},
+		};
+
+		obj.c.func2();
+		obj.c.func3();
+
+	</script>
+</body>
+</html>
