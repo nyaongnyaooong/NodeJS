@@ -186,7 +186,7 @@ os
 path
   경로처리할 때 사용하기 좋은 모듈
 
-  const path = requir('path');
+  const path = require('path');
 
   //사용하는 운영체제에 맞추어 경로를 자동으로 변환함
   path.join(__dirname, 'test.js');
