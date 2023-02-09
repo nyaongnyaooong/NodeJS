@@ -589,3 +589,238 @@ SemVer 버저닝
   Major : 하위 호환이 되지 않는 변경 사항
   Minor : 하위 호환이 되는 변경 사항
   Patch : 간단한 버그 수정
+
+라우터
+
+메서드 체이닝
+
+mySQL
+    설치경로 C:\Program Files\MySQL\MySQL Server 8.0\bin
+    C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql -uroot -p
+    mysql -u root -p
+    mysql -h localhost root -p
+
+    show databases;
+    create schema 'nodejs' default character set utf8;
+
+
+
+관리자 권한으로 접속
+=> mysql -uroot -p
+
+  C:\Bitnami\wampstack-8.1.11-0\mariadb\bin>mysql -uroot -p
+  Enter password: ******
+  Welcome to the MariaDB monitor.  Commands end with ; or \g.
+  Your MariaDB connection id is 8
+  Server version: 10.4.25-MariaDB mariadb.org binary distribution
+
+  Copyright (c) 2000, 2018, Oracle, MariaDB Corporation Ab and others.
+
+  Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+
+
+Database 생성
+=> create schema 이름
+
+  mysql> create schema nodejs default character set utf8;   
+  Query OK, 1 row affected, 1 warning (0.00 sec)
+
+
+
+Database 목록 확인
+=> Show databases;
+
+    MariaDB [(none)]> show databases;
+    +--------------------+
+    | Database           |
+    +--------------------+
+    | allyce             |
+    | information_schema |
+    | mysql              |
+    | performance_schema |
+    | test               |
+    +--------------------+
+    5 rows in set (0.009 sec)
+
+
+
+Database 선택
+=> Use 데이터베이스
+
+    MariaDB [(none)]> use allyce;
+    Database changed
+
+
+
+Table 생성
+=> Create Table 테이블명(Column명1, Column명2, ....)
+=> Column명 이후에 해당 Column의 부가 형식을 설정
+=> 변수형 설정 (n)은 길이 제한(자릿수)을 의미하는 듯 https://blog.martinwork.co.kr/mysql/2020/01/17/mysql-data-type.html
+=> NULL값을 허용하는가? NULL / NOT NULL
+=> 고유 식별값 설정(주소설정같은) Primary Key(위에서 언급한 Column중 하나));
+=> 자동으로 1씩 올라감 Auto_Increment
+=> date 날짜 기록, datetime 날짜+시간
+=> 자주 검색할 것 같은 것은 index를 걸면 검색 성능이 빨라짐
+    index commenter_idx (commenter ASC),
+    commenter 컬럼을 오름차순으로 indexing하겠다
+=> constraint 컬럼 > 해당 컬럼에 제약을 둔다
+
+    //생활코딩
+    MariaDB [allyce]> create table topic(
+        -> id INT(11) not null auto_increment,
+        -> title VARCHAR(100) not null,
+        -> description TEXT null,
+        -> created datetime not null,
+        -> author varchar(30) null,
+        -> primary key(id));
+    Query OK, 0 rows affected (0.018 sec)
+
+    //노드
+    create table nodejs.users (
+    id int not null auto_increment,
+    name varchar(20) not null,
+    age int unsigned not null,
+    married tinyint not null,
+    comment text null,
+    created_at datetime not null default now(),
+    primary key(id),
+    unique index name_unique (name ASC))
+    comment = '사용자 정보'
+    default charset=utf8
+    engine=innodb;
+
+    create table nodejs.comments (
+    id int not null auto_increment,
+    commenter int not null,
+    comment varchar(100) not null,
+    created_at datetime not null default now(),
+    primary key(id),
+    index commenter_idx (commenter ASC),
+    constraint commenter
+    foreign key (commenter)
+    references nodejs.users (id)
+    on delete cascade
+    on update cascade)
+    comment = '댓글'
+    default charset=utf8mb4
+    engine=innodb;
+
+
+Table List 보기
+=> Show Tables;
+
+    MariaDB [allyce]> show tables;
+    +------------------+
+    | Tables_in_allyce |
+    +------------------+
+    | topic            |
+    +------------------+
+    1 row in set (0.000 sec)
+
+
+
+해당 Table의 Column List 확인
+=> Desc 테이블명;
+
+    MariaDB [allyce]> desc topic;
+    +-------------+--------------+------+-----+---------+----------------+
+    | Field       | Type         | Null | Key | Default | Extra          |
+    +-------------+--------------+------+-----+---------+----------------+
+    | id          | int(11)      | NO   | PRI | NULL    | auto_increment |
+    | title       | varchar(100) | NO   |     | NULL    |                |
+    | description | text         | YES  |     | NULL    |                |
+    | created     | datetime     | NO   |     | NULL    |                |
+    | author      | varchar(30)  | YES  |     | NULL    |                |
+    +-------------+--------------+------+-----+---------+----------------+
+    5 rows in set (0.008 sec)
+
+테이블 삭제
+=> drop table;
+
+
+
+CRUD 중 Create
+=> Insert Into 테이블명(Column1, Column2, ...) Values('Value1', 'Value2', ...)
+=> 현재시간 입력함수 Now()
+
+    MariaDB [allyce]> insert into topic (title, description, created, author) values('MySQL', 'About MySQL', Now(), 'Allyce');
+    Query OK, 1 row affected (0.021 sec)
+
+    //Node
+    //유저 입력
+    insert into nodejs.users (name, age, married, comment) values ('bobo', 26, 0, '귀여움');
+    //댓글 입력
+    insert into nodejs.comments (commenter, comment) values (1, 'bobo의 댓글');
+
+
+
+CRUD 중 Read
+=> Select *From 테이블명;
+=> 애스터리스크 *은 모든 컬럼을 선택한다는 의미
+
+  MariaDB [allyce]> select *from topic;
+  +----+-------+-------------+---------------------+--------+
+  | id | title | description | created             | author |
+  +----+-------+-------------+---------------------+--------+
+  |  1 | MySQL | About MySQL | 2022-11-11 11:44:10 | Allyce |
+  +----+-------+-------------+---------------------+--------+
+  1 row in set (0.000 sec)
+
+  //Node
+  mysql> select *from nodejs.comments; 
+  +----+-----------+-------------+---------------------+
+  | id | commenter | comment     | created_at          |
+  +----+-----------+-------------+---------------------+
+  |  1 |         1 | bobo의 댓글 | 2023-02-08 16:56:29 |
+  +----+-----------+-------------+---------------------+
+  1 row in set (0.00 sec)
+
+=> where로 조건을 주어 선택 가능
+
+  mysql> select name, age from nodejs.users where married = 0 and age > 25;
+  +------+-----+
+  | name | age |
+  +------+-----+
+  | bobo |  26 |
+  +------+-----+
+  1 row in set (0.00 sec)
+
+=> or로 조건 중 하나 이상 만족하는 것을 찾음
+
+=> order by로 특정 칼럼 순으로 정렬 가능
+=> desc 내림차순 asc 오름차순
+  
+  mysql> select name, age from nodejs.users order by age desc;
+  +------+-----+
+  | name | age |
+  +------+-----+
+  | bobo |  26 |
+  +------+-----+
+  1 row in set (0.00 sec)
+
+=> limit로 조회할 개수 제한
+
+  mysql> select name, age from nodejs.users order by age desc limit 1;
+  +------+-----+
+  | name | age |
+  +------+-----+
+  | bobo |  26 |
+  +------+-----+
+  1 row in set (0.00 sec)
+
+
+
+CRUD 중 Update
+=> update 테이블명 set 컬럼=새값 where 조건
+
+  mysql> update nodejs.users set comment = '캡숑 귀여움' where id = 1;
+  Query OK, 1 row affected (0.00 sec)
+  Rows matched: 1  Changed: 1  Warnings: 0
+
+
+
+CRUD 중 Delete
+=> delete from 테이블 where 조건
+
+  delete from nodejs.users where id = 1;
