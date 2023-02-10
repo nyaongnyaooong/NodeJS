@@ -18,6 +18,8 @@ app.set('port', process.env.PORT || 3000);
 app.use(morgan('dev'));
 //배포시
 //app.use(morgan('combined'));
+
+//클라이언트 요청 경로를 실제 서버상의 경로로 변경
 app.use('/', express.static(path.join(__dirname, 'public')));
 //쿠키를 쉽게 넣을 수 있음
 app.use(cookieParser('cookiepassword'));
@@ -33,7 +35,6 @@ app.use(session({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-//클라이언트 요청 경로를 실제 서버상의 경로로 변경
 
 
 

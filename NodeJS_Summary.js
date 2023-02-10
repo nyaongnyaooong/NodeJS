@@ -824,3 +824,43 @@ CRUD 중 Delete
 => delete from 테이블 where 조건
 
   delete from nodejs.users where id = 1;
+
+
+
+시퀄라이즈 ORM
+=> SQL 작업을 쉽게 할 수 있도록 도와주는 라이브러리
+=> mySQL 이외 다른 RDB(Maria, postgre, SQLite, MSSQL)와도 호환됨
+=> 자바스크립트 문법으로 데이터베이스 조작 가능
+
+  //mysql2는 node와 mysql을 이어주는 드라이버
+  npm i express morgan nunjucks sequelize sequelize-cli mysql2
+  npm i -d nodemon
+  //시퀄라이즈 구조 생성
+  npx sequelize init
+
+  public, views, routes 폴더 및  app.js 파일 생성
+
+  models/index.js 파일 내용을 다음으로 바꿈
+
+    //mysql, node, sequelize간 연결해주는 코드
+    const Sequelize = require('sequelize');
+
+    const env = process.env.NODE_ENV || 'development';
+    const config = require('../config/config')[env];
+    const db = {};
+    
+    const sequelize = new Sequelize(config.database, config.username, config.password, config);
+    db.sequelize = sequelize;
+    db.Sequelize = Sequelize;
+    
+    module.exports = db;
+
+  config/config.json파일 내용 중 development 부분에 sql schema와 password 넣을 것
+
+    "development": {
+      "username": "root",         << default root
+      "password": "nodejsbook",   << schema password
+      "database": "nodejs",       << schema name
+      "host": "127.0.0.1",
+      "dialect": "mysql"
+    },
