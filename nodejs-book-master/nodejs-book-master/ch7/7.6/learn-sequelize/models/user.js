@@ -36,8 +36,10 @@ class User extends Sequelize.Model {
       collate: 'utf8_general_ci',
     });
   }
-
+  //관계 설정
   static associate(db) {
+    //user와 comment간 1:N 관계
+    //user의 foreignKey인 Comment 테이블의 commenter가 user의 id를 참조
     db.User.hasMany(db.Comment, { foreignKey: 'commenter', sourceKey: 'id' });
   }
 };

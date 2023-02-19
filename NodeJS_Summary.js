@@ -827,7 +827,8 @@ CRUD 중 Delete
 
 
 
-시퀄라이즈 ORM
+Sequelize ORM
+=> 공식 문서 https://sequelize.org/docs/v6/core-concepts/model-querying-basics/
 => SQL 작업을 쉽게 할 수 있도록 도와주는 라이브러리
 => mySQL 이외 다른 RDB(Maria, postgre, SQLite, MSSQL)와도 호환됨
 => 자바스크립트 문법으로 데이터베이스 조작 가능
@@ -864,3 +865,169 @@ CRUD 중 Delete
       "host": "127.0.0.1",
       "dialect": "mysql"
     },
+
+
+
+=> sequelize의 model = mySQL의 table
+=> model폴더내부에 model명으로 js파일 만들어서 설정해준 후 index js파일로 불러옴
+=> 예제의 해당 파일에 자세한 설명 첨부
+
+
+
+user model과 comment model의 관계
+=>  1:N 관계
+=>  sequelize에서는 1:N관계의 source model에서 hasMany로 표현 (사용자.hasMany(댓글))
+    sequelize에서는 1:1관계를 source model에서 hasOne으로 표현
+=>  source에 참조되는 model(table)은 belongsTo로 표현
+=>  model파일의 user.js 와 comment.js 참조
+=>  N:N관계 (SNS의 해쉬태그 같은)
+=>  중간 테이블이 있어야 함
+=>  Source모델이나 하위 모델이나 둘다 belongsToMany사용
+
+
+Post                  PostHashtag           Hashtag
+id  content           postID  hashTagID     id  title
+1   #node #express    1       1             1   node
+2   #node #good       1       2             2   express
+3   #javaScript       2       1             3   javaScript
+                      3       3
+
+
+=>  db.Post.belongsToMany(db.Hashtag, { through: 'PostHashtag' });
+    db.Hashtag.belongsToMany(db.Post, { through: 'PostHashtag' });
+
+
+sequelize에서 CRUD 중 Create
+=>  MySQL
+    insert into nodejs.users (name, age, married, comment) values ('bobo', 26, 0, '댓글');
+
+=>  sequelize
+    const { User } = require('../models');
+    User.create({
+      name: 'bobo',
+      age: 25, 
+      married: false,
+      comment: '댓글',
+    });
+
+    //User.create는 promise이므로 then해야 사용할 수 있음
+
+sequelize에서 CRUD 중 Read
+=>  MySQL
+    select *from nodejs.users;
+=>  sequelize
+    User.findAll({});
+
+=>  MySQL
+    select name, married from nodejs.users;
+=>  sequelize
+    User.findAll({
+      attributes: ['name', 'married'],
+    });
+
+=>  MySQL
+    select name, age from nodejs.users where married = 1 and age > 25;
+=>  sequelize
+    const { Op } = require('sequelize');
+    const { User } = require('../models');
+    User.findAll({
+      attributes: ['name', 'age'],
+      where: {
+        married: true,
+        //gt: > greater than
+        //lt: <
+        //gte: >=
+        //lte: <=
+        //ne: != not equel
+        //in [1, 2, 3] 포함되어있는가
+        age: { [Op.gt]: 25 },
+      }
+    });
+
+=>  MySQL
+    select id, name from nodejs.users where married = 0 or age > 30;
+=>  sequelize
+    const { Op } = require('sequelize');
+    const { User } = require('../models');
+    User.findAll({
+      attributes: ['id', 'name'],
+      where: {
+        [Op.gt]: [{ married: false }, { age: { [Op.gt]: 25 } }],
+      }
+    });
+
+**6강 시퀄라이즈 쿼리 알아보기 4:54**
+
+
+sequelize에서 CRUD 중 Update
+=>  MySQL
+    update nodejs.users set comment = '바꿀내용' where id = 1;
+=>  sequelize
+    User.update({
+      comment: '바꿀내용'
+    }, {
+      where: {id: 2},
+    });
+
+
+sequelize에서 CRUD 중 Delete
+=>  MySQL
+    delete from nodejs.users where id = 2;
+=>  sequelize
+    User.destroy({
+      where: { id: 2},
+    });
+
+
+
+sequelize 관계쿼리
+
+=>  ex1 : 결과값은 자바스크립트(JS) 객체
+    //user model의 1번 가져옴
+    const user = await User.findOne({});
+    //모두 가져올 경우엔 findAll({});
+
+    console.log(user.nick);
+
+
+=>  ex2 : include로 SQL의 join과 비슷한 기능 수행 (관계 있는 것 엮을 수 있음)
+    const user = await User.findOne({
+      include: [{
+        model: Comment,
+      }]
+    });
+    //사용자 댓글
+    console.log(User.Comments);
+
+
+=>  ex3 : get 모델명 으로 관계 있는 데이터 로딩 가능
+    const user = await User.fineOne({});
+    const comments = await user.getComments();
+    //사용자 댓글
+    console.log(comments);
+
+
+=>  ex4 : as로 모델명 변경 가능
+    //index.js에서 관계 설정시 as로 등록
+    db.User.hasMany(db.Comment, { foreignKey: 'commenter', sourceKey: 'id', as: 'Answers'});
+
+    //쿼리시
+    const user = await User.fineOne({});
+    const comments = await user.getAnswers();
+    //사용자 댓글
+    console.log(comments);
+
+
+
+=>  ex6 : 생성 쿼리
+    const user = await User.findOne({});
+    const comment = await Comment.create();
+    await user.addComment(comment);
+    //또는
+    //await user.addComment(comment.id);
+
+
+
+=>  ex7 : raw 쿼리로 직접 sql을 쓸 수 있음
+    const [result, metadata] = await sequelize.query('select *from comments');
+    console.log(result)
