@@ -3,8 +3,8 @@ const app = express();
 const path = require('path')
 const fs = require('fs')
 
-const bodyParser = require('body-parser');
-app.use(bodyParser.urlencoded({ extended : true }));
+//const bodyParser = require('body-parser');
+app.use(express.urlencoded({ extended : true }));
 
 const { MongoClient } = require('mongodb');
 const { Script } = require('vm');
@@ -74,7 +74,7 @@ app.get('/list', (req, res) => {
       bodyList = bodyList + 
       `
         <li class="list-group-item">
-          <h5>List ${ i + 1 }</h5>
+          <h5><a href="/detail/${ result[i]._id }">List ${ i + 1 }</a></h5>
           <span>할일 : ${ result[i].title }</span><br>
           <span>날짜 : ${ result[i].date }</span></p>
           <button class="btn_delete" data-id="${ result[i]._id }">삭제</button>
@@ -99,8 +99,12 @@ app.get('/list', (req, res) => {
             url: '/list/delete',
             data: {_id: listID},
           }).done((result) => {
+            console.log(event.target.parentNode);
+            $( event.target.parentNode ).fadeOut();
+          }).fail(() => {
+
           });
-          location.reload();
+          
   
         });
       }
@@ -116,6 +120,36 @@ app.get('/list', (req, res) => {
     // res.render('list.ejs', { posts : result });
   });
 });
+
+
+app.get('/detail/:id', (req, res) => { 
+  try {
+    db.collection('post').findOne({ _id: parseInt(req.params.id) }, (err, result) => {
+
+      console.log(result);
+      if(!result) {
+        res.status(404).send();
+        return console.log('noDB');
+      }
+      const head = BS_Head;
+      const bodyDetail = `
+      <h4>상세페이지</h4>
+      <p>${ result._id }<br>
+        ${ result.title }<br>
+        ${ result.date }
+      </p>
+      `;
+      const body = BS_Navbar + BS_JS + bodyDetail;
+      const HTML = fullHTML(head, body);
+      res.send(HTML);
+    });
+  } catch (err) {
+    console.error(err);
+  }
+
+});
+
+
 
 
 app.delete('/list/delete', (req, res) => {
@@ -135,16 +169,18 @@ app.delete('/list/delete', (req, res) => {
 
       //db삭제
       const deleteDB = await db.collection('post').deleteOne(req.body);
-      res.status(200).send({ message : 'complete' })
+      res.status(200).send({ message : 'complete' });
       //res.redirect('/list');
       
       // res.send(HTML);
 
     } catch (err) {
       console.error(err);
-      const body = BS_Navbar + '<p>Failed</p>' + BS_JS;
-      const HTML = fullHTML(head, body);
-      res.send(HTML);
+      res.status(400).send({ message : 'failed' });
+
+      // const body = BS_Navbar + '<p>Failed</p>' + BS_JS;
+      // const HTML = fullHTML(head, body);
+      // res.send(HTML);
     }
 
   }
