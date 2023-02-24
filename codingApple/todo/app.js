@@ -80,9 +80,11 @@ app.get('/list', (req, res) => {
       bodyList = bodyList + 
       `
         <li class="list-group-item">
-          <h5><a href="/detail/${ result[i]._id }">List ${ i + 1 }</a></h5>
-          <span>할일 : ${ result[i].title }</span><br>
-          <span>날짜 : ${ result[i].date }</span></p>
+          <a href="/detail/${ result[i]._id }" class="text-decoration-none">
+            <h5>List ${ i + 1 }</h5>
+            <span>할일 : ${ result[i].title }</span><br>
+            <span>날짜 : ${ result[i].date }</span></p>
+          </a>
           <button class="btn_delete" data-id="${ result[i]._id }">삭제</button>
           <a href="/edit/${ result[i]._id }"><button class="btn_edit" data-id="${ result[i]._id }">수정</button></a>
         </li>
@@ -144,11 +146,11 @@ app.get('/edit/:id', async (req, res) => {
         <form action="/edit/${ result._id }?_method=PUT" method="POST">
           <div class="form-group">
             <label>수정할 할일</label>
-            <input type="text" placeholder="${ result.title }" class="form-control" name="title">
+            <input type="text" value="${ result.title }" class="form-control" name="title">
           </div>
           <div class="form-group">
             <label>수정할 날짜</label>
-            <input type="text" placeholder="${ result.date }" class="form-control" name="date">
+            <input type="text" value="${ result.date }" class="form-control" name="date">
           </div>
           <button type="submit" class="btn btn-outline-secondary">Edit</button>
         </form>
@@ -158,7 +160,7 @@ app.get('/edit/:id', async (req, res) => {
     const HTML = fullHTML(head, body);
     res.send(HTML);
 
-} catch(err) {
+  } catch(err) {
     console.error(err);
     res.status(400).send({ message : 'failed' });
   }
@@ -202,31 +204,85 @@ app.put('/edit/:id', async (req, res) => {
 
 
 
-
-
-
 //detail
-app.get('/detail/:id', (req, res) => { 
+app.get('/detail/:id', async (req, res) => { 
+  console.log('detail request');
   try {
-    db.collection('post').findOne({ _id: parseInt(req.params.id) }, (err, result) => {
+    const result = await db.collection('post').findOne({ _id: parseInt(req.params.id) });
+    if(!result) {
+      res.status(404).send({ message: 'failed' });
+      return console.log('noDB');
+    }
+    console.log(result);
 
-      console.log(result);
-      if(!result) {
-        res.status(404).send();
-        return console.log('noDB');
-      }
-      const head = BS_Head;
-      const bodyDetail = `
+    const head = BS_Head;
+    const bodyDetail = `
       <h4>상세페이지</h4>
-      <p>${ result._id }<br>
-        ${ result.title }<br>
-        ${ result.date }
-      </p>
+      <div class="card" style="width: 100%;">
+        <div class="card-body">
+          <h5 class="card-title">${ result.title }</h5>
+          <h6 class="card-subtitle mb-2 text-muted">${ result.date }</h6>
+          <form action="/detail/${ result._id }?_method=PUT" method="POST">
+            <div class="form-group">
+              <label for="exampleFormControlTextarea1">Detail Context</label>
+              <textarea class="form-control" id="exampleFormControlTextarea1" rows="3" name="context">${ result.context }</textarea>
+            </div>
+            <input class="btn btn-link card-link" type="submit" value="Save">
+            <!--
+            <a href="/list" class="card-link">Save</a>
+            -->
+          </form>
+        </div>
+      </div>
       `;
-      const body = BS_Navbar + BS_JS + bodyDetail;
-      const HTML = fullHTML(head, body);
-      res.send(HTML);
-    });
+    const body = BS_Navbar + BS_JS + bodyDetail;
+    const HTML = fullHTML(head, body);
+    res.send(HTML);
+  
+  } catch (err) {
+    console.error(err);
+  }
+
+});
+
+
+//detail save
+app.put('/detail/:id', async (req, res) => { 
+  console.log('detail save request');
+  try {
+    dbObject = {
+      context: req.body.context,
+    };
+    console.log(req.body);
+    const result = await db.collection('post').updateOne({ _id: parseInt(req.params.id) }, { $set: dbObject });
+    
+    if(!result) {
+      res.status(404).send({ message: 'failed' });
+      return console.log('noDB');
+    }
+    console.log(result);
+
+    const head = BS_Head;
+    const bodyDetail = `
+      <h4>상세페이지</h4>
+      <div class="card" style="width: 100%;">
+        <div class="card-body">
+          <h5 class="card-title">${ result._id }</h5>
+          <h6 class="card-subtitle mb-2 text-muted">${ result.date }</h6>
+          <form action="/detail/${ result._id }?_method=PUT" method="POST">
+          <div class="form-group">
+            <label for="exampleFormControlTextarea1">Detail Context</label>
+            <textarea class="form-control" id="exampleFormControlTextarea1" rows="3">${ result.context }</textarea>
+          </div>
+
+          <a href="/list" class="card-link">Save</a>
+          </form>
+        </div>
+      </div>
+    `;
+
+    res.redirect('/list');
+  
   } catch (err) {
     console.error(err);
   }
@@ -275,43 +331,38 @@ app.delete('/list/delete', (req, res) => {
 
 //create
 app.post('/write/complete', async (req, res) => {
-  console.log(req.body);
+  console.log('Create request');
+  try {
+    console.log('request data: ', req.body);
 
-  const head = BS_Head;
-  const addDataOnDB = async () => {
-    try {
-      //ID 찾기
-      const { ID } = await db.collection('counter').findOne({ name: 'lastID' });
-      //ID 숫자증가
-      const updateID = await db.collection('counter').updateOne({ name: 'lastID' }, { $inc : { ID: 1} });
+    //counter collection에서 ID 찾기
+    const { ID } = await db.collection('counter').findOne({ name: 'lastID' });
+    //counter collection ID 숫자증가
+    const updateID = await db.collection('counter').updateOne({ name: 'lastID' }, { $inc : { ID: 1} });
 
-      //넣을 DB값 object형식으로 선언
-      dbObject = {
-        _id: ID,
-        title: req.body.title,
-        date: req.body.date,
-      }
-
-      //object를 db에 저장
-      const addDB = await db.collection('post').insertOne(dbObject);
-
-      //결과를 클라이언트한테 전송
-      const body = BS_Navbar + '<p>Complete</p>' + BS_JS;
-      const HTML = fullHTML(head, body);
-      res.redirect('/write')
-      // res.send(HTML);
-
-    } catch (err) {
-      console.error(err);
-      //실패했음을 클라이언트한테 전송
-      const body = BS_Navbar + '<p>Failed</p>' + BS_JS;
-      const HTML = fullHTML(head, body);
-      res.send(HTML);
+    //넣을 DB값 object형식으로 선언
+    dbObject = {
+      _id: ID,
+      title: req.body.title,
+      date: req.body.date,
+      context: '',
     }
 
+    //object를 post collection에 저장
+    const addDB = await db.collection('post').insertOne(dbObject);
+
+    //결과를 클라이언트한테 전송
+    const head = BS_Head;
+    const body = BS_Navbar + '<p>Complete</p>' + BS_JS;
+    const HTML = fullHTML(head, body);
+    res.redirect('/write');
+    //res.send({ message: 'complete' });
+    
+  } catch(err) {
+    console.error(err);
+    res.status(400).send({ message: 'failed' });
   }
 
-  addDataOnDB();
 });
 
 
