@@ -1,15 +1,21 @@
 const express = require('express');
 const app = express();
-const path = require('path')
-const fs = require('fs')
+const path = require('path');
+const fs = require('fs');
 
+//express 모듈에 body-parser내장
 //const bodyParser = require('body-parser');
 app.use(express.urlencoded({ extended : true }));
 
-const { MongoClient } = require('mongodb');
-const { Script } = require('vm');
-app.set('view engine', 'ejs');
+const methodOverride = require('method-override');
+app.use(methodOverride('_method'));
+
+
+const { MongoClient, ServerApiVersion } = require('mongodb');
+//const { Script } = require('vm');
+//app.set('view engine', 'ejs');
  
+
 
 let db;
 const dbURL = 'mongodb+srv://luckyyou123:R4w7j2yNgEhShF2l@cluster0.pdr9saa.mongodb.net/?retryWrites=true&w=majority';
@@ -78,6 +84,7 @@ app.get('/list', (req, res) => {
           <span>할일 : ${ result[i].title }</span><br>
           <span>날짜 : ${ result[i].date }</span></p>
           <button class="btn_delete" data-id="${ result[i]._id }">삭제</button>
+          <a href="/edit/${ result[i]._id }"><button class="btn_edit" data-id="${ result[i]._id }">수정</button></a>
         </li>
       `;
       
@@ -105,7 +112,6 @@ app.get('/list', (req, res) => {
 
           });
           
-  
         });
       }
 
@@ -122,6 +128,84 @@ app.get('/list', (req, res) => {
 });
 
 
+
+//update
+app.get('/edit/:id', async (req, res) => {
+
+  try {
+    const result = await db.collection('post').findOne({ _id: parseInt(req.params.id) });
+    console.log(result);
+
+    const head = BS_Head;
+
+
+    const bodyEdit = `
+      <div class="container mt-3">
+        <form action="/edit/${ result._id }?_method=PUT" method="POST">
+          <div class="form-group">
+            <label>수정할 할일</label>
+            <input type="text" placeholder="${ result.title }" class="form-control" name="title">
+          </div>
+          <div class="form-group">
+            <label>수정할 날짜</label>
+            <input type="text" placeholder="${ result.date }" class="form-control" name="date">
+          </div>
+          <button type="submit" class="btn btn-outline-secondary">Edit</button>
+        </form>
+      </div>
+    `;    
+    const body = BS_Navbar + BS_JS + bodyEdit;
+    const HTML = fullHTML(head, body);
+    res.send(HTML);
+
+} catch(err) {
+    console.error(err);
+    res.status(400).send({ message : 'failed' });
+  }
+  
+});
+
+
+
+
+//update
+app.put('/edit/:id', async (req, res) => {
+  console.log('put request');
+  try {
+    dbObject = {
+      title: req.body.title,
+      date: req.body.date,
+    };
+    console.log(req.body);
+    const result = await db.collection('post').updateOne({ _id: parseInt(req.params.id) }, { $set: dbObject });
+    
+    //결과를 클라이언트한테 전송
+    const head = BS_Head;
+    const body = BS_Navbar + '<p>Complete</p>' + BS_JS;
+    const HTML = fullHTML(head, body);
+    res.redirect('/list')
+    // res.send(HTML);
+
+  } catch (err) {
+      console.error(err);
+      //실패했음을 클라이언트한테 전송
+      const body = BS_Navbar + '<p>Failed</p>' + BS_JS;
+      const HTML = fullHTML(head, body);
+      res.status(400).send({ message: 'failed' });
+    
+  }
+
+});
+
+
+
+
+
+
+
+
+
+//detail
 app.get('/detail/:id', (req, res) => { 
   try {
     db.collection('post').findOne({ _id: parseInt(req.params.id) }, (err, result) => {
@@ -151,7 +235,7 @@ app.get('/detail/:id', (req, res) => {
 
 
 
-
+//delete
 app.delete('/list/delete', (req, res) => {
   const head = BS_Head;
 
@@ -189,12 +273,11 @@ app.delete('/list/delete', (req, res) => {
 });
 
 
-app.post('/write/complete', (req, res) => {
+//create
+app.post('/write/complete', async (req, res) => {
+  console.log(req.body);
+
   const head = BS_Head;
-
-  console.log(req.body.title);
-  console.log(req.body.date);
-
   const addDataOnDB = async () => {
     try {
       //ID 찾기
