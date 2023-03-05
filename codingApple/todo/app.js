@@ -41,20 +41,36 @@ console.log('HTML file loaded.');
 
 
 
-function fullHTML(head, body) {
+
+
+
+
+
+
+
+const fullHTML = (head, body) => {
   // let fullHTML = '<head>' + head + '</head><body>' + body + '</body>';
   const fullHTML = '<!doctype html><html><head>' + head + '</head><body>' + body + '</body></html>';
   return fullHTML
 }
 
+const basicHTML = (addBody = "") => {
+
+  const head = BS_Head;
+  const body = BS_Navbar + BS_JS + addBody;
+  const HTML = fullHTML(head, body);
+
+  return HTML;
+}
+
+
+
 
 
 //Main Router
 app.get('/', (req, res) => {
-  const head = BS_Head;
-  const body = BS_Navbar + BS_JS;
-  const HTML = fullHTML(head, body);
-  res.send(HTML);
+
+  res.send(basicHTML());
   // res.sendFile(__dirname + '/index.html');
 });
 
@@ -71,17 +87,32 @@ app.get('/write', (req, res) => {
 
 
 //Read Router
-app.get('/list', (req, res) => {
-  const head = BS_Head;
+app.get('/list', async (req, res) => {
 
-  db.collection('post').find().toArray((err, result) => {
-    let bodyList = `<ul class="list-group">`;
-    for (let i = 0; i < result.length; i++) {
+  try {
+
+    const result = await db.collection('post').find().toArray();
+
+    //add search box
+    let bodyList = `
+    <div class="input-group m-5 w-auto">
+      <input type="text" class="form-control" placeholder="Search Todo" aria-label="Search Todo" aria-describedby="button-addon2" id="btn_search">
+      <div class="input-group-append">
+        <button class="btn btn-outline-secondary" type="button" id="button-addon2">Search</button>
+      </div>
+    </div>
+    `;
+
+
+    //add todo list
+    bodyList = bodyList + `<ul class="list-group">`;
+
+    for(let i in result) {
       bodyList = bodyList + 
       `
         <li class="list-group-item">
           <a href="/detail/${ result[i]._id }" class="text-decoration-none">
-            <h5>List ${ i + 1 }</h5>
+            <h5>List ${ parseInt(i) + 1 }</h5>
             <span>할일 : ${ result[i].title }</span><br>
             <span>날짜 : ${ result[i].date }</span></p>
           </a>
@@ -89,49 +120,54 @@ app.get('/list', (req, res) => {
           <a href="/edit/${ result[i]._id }"><button class="btn_edit" data-id="${ result[i]._id }">수정</button></a>
         </li>
       `;
-      
     }
 
 
+    //to add delete request, use ajax by jquery
     bodyList += `</ul>
 
     <script src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
 
     <script>
       const deleteBTN = document.querySelectorAll('.btn_delete');
+      const searchBTN = document.querySelectorAll('#btn_search');
 
-      for(let i = 0; i < deleteBTN.length; i++) {
+      searchBTN.addEventListener('click', (event) => {
+        
+      }
+
+      for(let i in deleteBTN) {
         deleteBTN[i].addEventListener('click', (event) => {
           let listID = event.target.dataset.id;
           $.ajax({
             method: 'DELETE',
             url: '/list/delete',
-            data: {_id: listID},
+            data: { _id: listID },
           }).done((result) => {
             console.log(event.target.parentNode);
             $( event.target.parentNode ).fadeOut();
           }).fail(() => {
 
           });
-          
         });
       }
-
-      
-
     </script>
     `;
-    const body = BS_Navbar + BS_JS + bodyList;
-    const HTML = fullHTML(head, body);
-    res.send(HTML);
+
+
+    res.send(basicHTML(bodyList));
     // console.log(result);
     // res.render('list.ejs', { posts : result });
-  });
+      
+  } catch (err) {
+    console.error(err)
+  }
+
 });
 
 
 
-//update
+//update html
 app.get('/edit/:id', async (req, res) => {
 
   try {
@@ -170,7 +206,7 @@ app.get('/edit/:id', async (req, res) => {
 
 
 
-//update
+//update (put request process)
 app.put('/edit/:id', async (req, res) => {
   console.log('put request');
   try {
