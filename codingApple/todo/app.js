@@ -96,9 +96,9 @@ app.get('/list', async (req, res) => {
     //add search box
     let bodyList = `
     <div class="input-group m-5 w-auto">
-      <input type="text" class="form-control" placeholder="Search Todo" aria-label="Search Todo" aria-describedby="button-addon2" id="btn_search">
+      <input type="text" class="form-control" placeholder="Search Todo" aria-label="Search Todo" aria-describedby="button-addon2" id="input_search">
       <div class="input-group-append">
-        <button class="btn btn-outline-secondary" type="button" id="button-addon2">Search</button>
+        <button class="btn btn-outline-secondary" type="button" id="btn_search">Search</button>
       </div>
     </div>
     `;
@@ -124,19 +124,34 @@ app.get('/list', async (req, res) => {
 
 
     //to add delete request, use ajax by jquery
+   
     bodyList += `</ul>
 
     <script src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
 
     <script>
       const deleteBTN = document.querySelectorAll('.btn_delete');
-      const searchBTN = document.querySelectorAll('#btn_search');
+      const searchBTN = document.querySelector("#btn_search");
+      const searchInput = document.querySelector("#input_search")
+
+
 
       searchBTN.addEventListener('click', (event) => {
-        
-      }
+        const queryObject = {
+          keyword: searchInput.value,
+        };
 
-      for(let i in deleteBTN) {
+        const queryStr = new URLSearchParams(queryObject).toString();
+        console.log(queryStr);
+        window.location.replace("/search?" + queryStr);
+
+      });
+
+
+
+      
+
+      for(let i = 0; i < deleteBTN.length; i++) {
         deleteBTN[i].addEventListener('click', (event) => {
           let listID = event.target.dataset.id;
           $.ajax({
@@ -164,6 +179,110 @@ app.get('/list', async (req, res) => {
   }
 
 });
+
+
+//Search Router
+app.get('/search', async (req, res) => {
+  console.log(req.query);
+  try {
+    // const result = await db.collection('post').find( { $text: { $search: req.query.keyword } }).toArray();
+    const condition = [
+      {
+        $search: {
+          index: "titleSearch",
+          text: {
+            query: req.query.keyword,
+            path: ["title"],
+          },
+        }
+      }
+    ]
+    const result = await db.collection('post').aggregate().toArray();
+
+
+    //add search box
+    let bodyList = `
+    <div class="input-group m-5 w-auto">
+      <input type="text" class="form-control" placeholder="${ req.query.keyword }" aria-label="Search Todo" aria-describedby="button-addon2" id="input_search">
+      <div class="input-group-append">
+        <button class="btn btn-outline-secondary" type="button" id="btn_search">Search</button>
+      </div>
+    </div>
+    `;
+
+
+    //add todo list
+    bodyList = bodyList + `<ul class="list-group">`;
+
+    for(let i in result) {
+      bodyList = bodyList + 
+      `
+        <li class="list-group-item">
+          <a href="/detail/${ result[i]._id }" class="text-decoration-none">
+            <h5>List ${ parseInt(i) + 1 }</h5>
+            <span>할일 : ${ result[i].title }</span><br>
+            <span>날짜 : ${ result[i].date }</span></p>
+          </a>
+          <button class="btn_delete" data-id="${ result[i]._id }">삭제</button>
+          <a href="/edit/${ result[i]._id }"><button class="btn_edit" data-id="${ result[i]._id }">수정</button></a>
+        </li>
+      `;
+    }
+
+
+    //to add delete request, use ajax by jquery
+    //to add search request, use ajax by jquery
+    bodyList += `</ul>
+
+    <script src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
+
+    <script>
+      const deleteBTN = document.querySelectorAll('.btn_delete');
+      const searchBTN = document.querySelector("#btn_search");
+      const searchInput = document.querySelector("#input_search")
+
+
+
+      searchBTN.addEventListener('click', (event) => {
+        const searchValue = searchInput.value;
+        window.location.replace("/search?keyword=" + searchValue);
+      });
+
+
+
+      
+
+      for(let i = 0; i < deleteBTN.length; i++) {
+        deleteBTN[i].addEventListener('click', (event) => {
+          let listID = event.target.dataset.id;
+          $.ajax({
+            method: 'DELETE',
+            url: '/list/delete',
+            data: { _id: listID },
+          }).done((result) => {
+            console.log(event.target.parentNode);
+            $( event.target.parentNode ).fadeOut();
+          }).fail(() => {
+
+          });
+        });
+      }
+    </script>
+    `;
+
+
+    res.send(basicHTML(bodyList));
+    // console.log(result);
+    // res.render('list.ejs', { posts : result });
+      
+  } catch (err) {
+    console.error(err)
+  }
+
+});
+
+
+
 
 
 
