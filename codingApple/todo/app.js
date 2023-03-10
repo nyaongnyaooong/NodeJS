@@ -1,15 +1,16 @@
 const express = require('express');
 const app = express();
+
 const path = require('path');
 const fs = require('fs');
 
+
 //express 모듈에 body-parser내장
-//const bodyParser = require('body-parser');
 app.use(express.urlencoded({ extended : true }));
 
+//methodOverride - For RESTFUL API
 const methodOverride = require('method-override');
 app.use(methodOverride('_method'));
-
 
 //const { Script } = require('vm');
 //app.set('view engine', 'ejs');
